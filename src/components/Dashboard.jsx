@@ -1,10 +1,33 @@
-import { Activity, Flame, Gauge, Wifi, WifiOff } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Activity, Flame, Gauge, Wifi, WifiOff, FlaskConical } from "lucide-react";
+import axios from "axios";
 import StatusCard from "./StatusCard";
 import ValveControl from "./ValveControl";
 import GasChart from "./GasChart";
 
+const DEMO_COOLDOWN_SEC = 60;
+
 export default function Dashboard({ device, history, setValveOpen }) {
   const { isOnline, gasPpm, flameDetected, valveOpen, deviceId } = device;
+
+  const [demoRemaining, setDemoRemaining] = useState(0);
+  const demoRunning = demoRemaining > 0;
+
+  useEffect(() => {
+    if (demoRemaining <= 0) return;
+    const timer = setTimeout(() => setDemoRemaining((r) => r - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [demoRemaining]);
+
+  const triggerDemo = useCallback(async () => {
+    if (demoRunning) return;
+    setDemoRemaining(DEMO_COOLDOWN_SEC);
+    try {
+      await axios.post(`/api/device/${encodeURIComponent(deviceId)}/demo`);
+    } catch {
+      /* backend may not be connected yet — demo lock still counts down */
+    }
+  }, [demoRunning, deviceId]);
 
   const gasLevel =
     gasPpm > 400 ? "CRITICAL" : gasPpm > 200 ? "WARNING" : "NORMAL";
@@ -65,6 +88,24 @@ export default function Dashboard({ device, history, setValveOpen }) {
           valveOpen={valveOpen}
           setValveOpen={setValveOpen}
         />
+      </div>
+
+      {/* Row 3 — Demo Trigger */}
+      <div className="lg:col-span-4 md:col-span-2">
+        <button
+          onClick={triggerDemo}
+          disabled={demoRunning}
+          className={`w-full flex items-center justify-center gap-3 rounded-2xl border px-6 py-4 text-sm font-semibold tracking-wide transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+            demoRunning
+              ? "border-amber-500/30 bg-amber-500/10 text-amber-300 cursor-not-allowed"
+              : "border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-400/60 cursor-pointer focus-visible:ring-indigo-400"
+          }`}
+        >
+          <FlaskConical className="h-5 w-5" />
+          {demoRunning
+            ? `Demo Running… (${demoRemaining}s)`
+            : "Run Presentation Demo"}
+        </button>
       </div>
     </div>
   );
