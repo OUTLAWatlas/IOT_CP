@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-slate-850: #172033;
+  --color-slate-950: #0b1120;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-flash {
+  animation: flash 1s ease-in-out infinite;
+}
